@@ -1,0 +1,13 @@
+https://www.geeksforgeeks.org/socket-programming-in-cc-handling-multiple-clients-on-server-without-multi-threading/
+
+https://www.geeksforgeeks.org/socket-programming-cc/
+
+https://www.ime.usp.br/~pf/algoritmos/aulas/footnotes/exit.html
+
+http://man7.org/linux/man-pages/man2/listen.2.html
+
+http://pubs.opengroup.org/onlinepubs/7908799/xns/syssocket.h.html
+
+http://pubs.opengroup.org/onlinepubs/7908799/xns/setsockopt.html
+
+http://pubs.opengroup.org/onlinepubs/009695399/functions/read.html

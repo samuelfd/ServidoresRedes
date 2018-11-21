@@ -11,3 +11,9 @@ http://pubs.opengroup.org/onlinepubs/7908799/xns/syssocket.h.html
 http://pubs.opengroup.org/onlinepubs/7908799/xns/setsockopt.html
 
 http://pubs.opengroup.org/onlinepubs/009695399/functions/read.html
+
+https://pt.wikibooks.org/wiki/Programa%C3%A7%C3%A3o_Paralela_em_Arquiteturas_Multi-Core/Programa%C3%A7%C3%A3o_em_Pthreads
+
+https://linux.die.net/man/2/write
+
+http://man7.org/linux/man-pages/man3/bzero.3.html

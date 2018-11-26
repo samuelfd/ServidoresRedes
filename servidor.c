@@ -8,13 +8,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <dirent.h> 
 
 struct sockaddr_in cliente, servidor;
 
 socklen_t tamanho_cliente;
 
+struct dirent *dir;
+
+
 int cliente_socket = 0,aux = 0 ,cliente_thread = 0,id_thread = 0,cliente_conect = 0;
-char mensagem[2048];
+char mensagem[2048], *arquivo,*split;
 
 void resposta_servidor(int cliente);
 void *cria_thread(void *cliente_thread);
@@ -65,19 +69,28 @@ void servidor_FilaTarefas (int porta){
         else{
             perror("Erro ao se conectar !");
         }
-
-        bzero(mensagem,2048);
-
-        if(id_thread == 4) id_thread = 0;
+              
 
         aux = read (cliente_conect, mensagem, 2048);
+        char resp [strlen(mensagem)];        
+        strcpy(resp,mensagem);        
+        split = strtok(resp, "/");
+        split = strtok(NULL, " ");
+        arquivo = split;
+        printf("ARQUIVO : %s\n",arquivo);
 
-        if(aux >= 0){
+        
+
+        if(aux >= 0){            
             printf("Requisicao do cliente:\n------------------------------------------------------\n%s\n",mensagem);
-        }
+            
+        }        
         else{
             perror("Erro ao ler a mensagem do cliente!");
         }
+        
+        
+        
         // Atribui a requisicao do cliente a uma thread
         cliente_thread = pthread_create(&nova_thread[id_thread], NULL, cria_thread, &cliente_conect);
 
@@ -96,6 +109,7 @@ void servidor_FilaTarefas (int porta){
 
 // Funcao ponteiro void responsavel pela thread
 void *cria_thread(void *cliente_conect){
+    
     int *cliente_porta = (void *) cliente_conect;
    
     resposta_servidor(*cliente_porta);
@@ -103,28 +117,70 @@ void *cria_thread(void *cliente_conect){
     pthread_exit(NULL);
 }
 
+
+
 // Responsavel por responder a requisicao do cliente
-void resposta_servidor(int cliente_conect){	
-    int situacao;    
+void resposta_servidor(int cliente_conect){	    
+    int situacao; 
+    char *aux,tamanho2[50];
+    FILE *arq = fopen(arquivo, "rb");   
+    fseek(arq,0, SEEK_END);
+    long tamanho = ftell(arq);    
+    sprintf(tamanho2,"%ld",tamanho);    
+    fseek(arq, 0, SEEK_SET);   
+    char resp [80];
+    char resp_parte1[255] = "HTTP/1.1 200 OK\r\n";
+    write(cliente_conect,resp_parte1,sizeof(resp_parte1));
+    strcpy (resp_parte1,"Content-Length: ");
+    //resp_parte1 = "Content-Length: ";           
+    strcat(resp_parte1, tamanho2);
+    strcat(resp_parte1, "\r\n");      
+    printf("PART1: %s\n",resp_parte1);
+    write(cliente_conect,resp_parte1,sizeof(resp_parte1));   
+    char resp_parte2[255] = "Connection: close\r\n";
+    strcpy (resp_parte2,"Content-Type: ");
+    //resp_parte2 = "Content-Type: ";
+    aux = strtok (arquivo, ".");    
+    aux = strtok (NULL, "\0");
+    printf("AUX: %s\n",aux);    
+    
+    
+    if(strcmp(aux,"htm") == 0  || strcmp(aux,"html") == 0  || strcmp(aux,"txt") == 0 ){
+        strcat(resp_parte2, "text/html\r\n\r\n");
+        
+    }
+    else if (strcmp(aux,"jpeg") == 0  || strcmp(aux,"jpg") == 0 ){
+        strcat(resp_parte2, "image/jpeg\r\n\r\n");
 
-    char resposta [1024] = "HTTP/1.1 200 OK\n\
-    Date: Mon, 26 Oct 2018 23:59:59 GMT\n\
-    Server: Sam007 (Unix)  (Ubuntu/Linux)\n\
-    Accept-Ranges: bytes\n\
-    Content-Length: 170\n\
-    Connection: close\n\
-    Content-Type: text/html; charset=UTF-8\n\n\
-    <!DOCTYPE html><html>\n\
-    <head>\n\
-    <title>FilaDeTarefas</title>\n\
-    </head>\n\
-    <body>\n\
-    <h1>Conectado com Sucesso ! <h1>\n\
-    </body>\n\
-    </html>\r\n";
+    }
+    else if (strcmp(aux,"js") == 0 ){
+        strcat(resp_parte2, "application/javascript\r\n\r\n");
 
-    //Resposta ao cliente caso a conexao tenha sucesso
-    situacao = write(cliente_conect,resposta,sizeof(resposta)); 
+    }
+    else if (strcmp(aux,"pdf") == 0 ){
+        printf("PDF");
+        strcat(resp_parte2, "application/pdf\r\n\r\n");
+
+    }
+    else if (strcmp(aux,"png") == 0 ){
+        strcat(resp_parte2, "image/png\r\n\r\n");
+    }
+    else if (strcmp(aux,"ico") == 0 ){
+        strcat(resp_parte2, "image/x-icon\r\n\r\n");
+
+    }
+    
+    printf("AAAAAB : %s\n\n",resp_parte2);
+    write(cliente_conect,resp_parte2,sizeof(resp_parte2));
+
+    char *arquivo_solicitado = malloc(tamanho + 1);
+    fread(arquivo_solicitado,tamanho, 1,arq);
+    //printf("AAAA: %s\n",arquivo_solicitado);
+    
+
+    printf("ARQ: %s\n",arquivo_solicitado);
+    // Resposta ao cliente caso a conexao tenha sucesso
+    situacao = write(cliente_conect,arquivo_solicitado,sizeof(arquivo_solicitado)); 
    	
         
     //Erro em enviar a resposta 
@@ -143,9 +199,6 @@ int main(int argc, char const *argv[]){
     servidor_FilaTarefas(porta);
     
 
-
-
-    
     
     return 0;
 }

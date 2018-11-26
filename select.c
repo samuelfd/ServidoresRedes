@@ -143,25 +143,12 @@ int main(int argc, char *argv[]){
 
                         else
                             perror("recv() error lol!");
-
+                            resposta_servidor(newfd);        
                         /* close it... */
                         close(i);
                         /* remove from master set */
                         FD_CLR(i, &master);
-                    }
-                    else{
-                        /* we got some data from a client*/
-                        for(j = 0; j <= fdmax; j++){
-                            /* send to everyone! */
-                            if(FD_ISSET(j, &master)){
-                                /* except the listener and ourselves */
-                                if(j != listener && j != i){
-                                    if(send(j, buf, nbytes, 0) == -1)
-                                        perror("send() error lol!");
-                                }
-                            }
-                        }
-                    }
+                    }                    
                 }
             }
         }

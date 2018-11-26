@@ -120,68 +120,95 @@ void *cria_thread(void *cliente_conect){
 
 
 // Responsavel por responder a requisicao do cliente
-void resposta_servidor(int cliente_conect){	    
-    int situacao; 
-    char *aux,tamanho2[50];
-    FILE *arq = fopen(arquivo, "rb");   
-    fseek(arq,0, SEEK_END);
-    long tamanho = ftell(arq);    
-    sprintf(tamanho2,"%ld",tamanho);    
-    fseek(arq, 0, SEEK_SET);   
-    char resp [80];
-    char resp_parte1[255] = "HTTP/1.1 200 OK\r\n";
-    write(cliente_conect,resp_parte1,sizeof(resp_parte1));
-    strcpy (resp_parte1,"Content-Length: ");
-    //resp_parte1 = "Content-Length: ";           
-    strcat(resp_parte1, tamanho2);
-    strcat(resp_parte1, "\r\n");      
-    printf("PART1: %s\n",resp_parte1);
-    write(cliente_conect,resp_parte1,sizeof(resp_parte1));   
-    char resp_parte2[255] = "Connection: close\r\n";
-    strcpy (resp_parte2,"Content-Type: ");
-    //resp_parte2 = "Content-Type: ";
-    aux = strtok (arquivo, ".");    
-    aux = strtok (NULL, "\0");
-    printf("AUX: %s\n",aux);    
-    
-    
-    if(strcmp(aux,"htm") == 0  || strcmp(aux,"html") == 0  || strcmp(aux,"txt") == 0 ){
-        strcat(resp_parte2, "text/html\r\n\r\n");
+void resposta_servidor(int cliente_conect){	   
+    int situacao;
+    char *aux;
+    char resp [255]= "HTTP/1.1 200 OK\r\n\
+    Connection: close\r\n\
+    Content-Type: text/html; charset=UTF-8\r\n\
+    Content-Length: "; 
+    char diretorio [1000] , tam_diretorio[10];    
+    aux = strtok (arquivo, "/");     
+
+    if(strcmp(arquivo,"HTTP") == 0){
+        DIR *d;        
+        d = opendir(".");
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {
+                strcat(diretorio,dir->d_name);
+                strcat(diretorio,"\n"); 
+
+            }
+            sprintf(tam_diretorio,"%ld",strlen(diretorio));            
+            strcat(resp,tam_diretorio);
+            strcat(resp,"\r\n\r\n");
+            printf("RESP : %s\n",resp);
+            write(cliente_conect,resp,sizeof(resp));
+            printf("DIRE : %s\n",diretorio);
+            write(cliente_conect,diretorio,sizeof(diretorio));
+            closedir(d);
+        }
+    }   
+    else {
+        char tamanho2[50];
+        FILE *arq = fopen(arquivo, "rb");   
+        fseek(arq,0, SEEK_END);
+        long tamanho = ftell(arq);    
+        sprintf(tamanho2,"%ld",tamanho);    
+        fseek(arq, 0, SEEK_SET);        
+        char resp_parte1[255] = "HTTP/1.1 200 OK\r\n";
+        write(cliente_conect,resp_parte1,sizeof(resp_parte1));
+        strcpy (resp_parte1,"Content-Length: ");
+        //resp_parte1 = "Content-Length: ";           
+        strcat(resp_parte1, tamanho2);
+        strcat(resp_parte1, "\r\n");      
+        printf("PART1: %s\n",resp_parte1);
+        write(cliente_conect,resp_parte1,sizeof(resp_parte1));   
+        char resp_parte2[255] = "Connection: close\r\n";
+        strcpy (resp_parte2,"Content-Type: ");
+        //resp_parte2 = "Content-Type: ";
+        aux = strtok (arquivo, ".");    
+        aux = strtok (NULL, "\0");
+        printf("AUX: %s\n",aux);    
         
-    }
-    else if (strcmp(aux,"jpeg") == 0  || strcmp(aux,"jpg") == 0 ){
-        strcat(resp_parte2, "image/jpeg\r\n\r\n");
+        
+        if(strcmp(aux,"htm") == 0  || strcmp(aux,"html") == 0  || strcmp(aux,"txt") == 0 ){
+            strcat(resp_parte2, "text/html\r\n\r\n");
+            
+        }
+        else if (strcmp(aux,"jpeg") == 0  || strcmp(aux,"jpg") == 0 ){
+            strcat(resp_parte2, "image/jpeg\r\n\r\n");
 
-    }
-    else if (strcmp(aux,"js") == 0 ){
-        strcat(resp_parte2, "application/javascript\r\n\r\n");
+        }
+        else if (strcmp(aux,"js") == 0 ){
+            strcat(resp_parte2, "application/javascript\r\n\r\n");
 
-    }
-    else if (strcmp(aux,"pdf") == 0 ){
-        printf("PDF");
-        strcat(resp_parte2, "application/pdf\r\n\r\n");
+        }
+        else if (strcmp(aux,"pdf") == 0 ){
+            printf("PDF");
+            strcat(resp_parte2, "application/pdf\r\n\r\n");
 
-    }
-    else if (strcmp(aux,"png") == 0 ){
-        strcat(resp_parte2, "image/png\r\n\r\n");
-    }
-    else if (strcmp(aux,"ico") == 0 ){
-        strcat(resp_parte2, "image/x-icon\r\n\r\n");
+        }
+        else if (strcmp(aux,"png") == 0 ){
+            strcat(resp_parte2, "image/png\r\n\r\n");
+        }
+        else if (strcmp(aux,"ico") == 0 ){
+            strcat(resp_parte2, "image/x-icon\r\n\r\n");
 
+        }
+        
+        printf("AAAAAB : %s\n\n",resp_parte2);
+        write(cliente_conect,resp_parte2,sizeof(resp_parte2));
+
+        char *arquivo_solicitado = malloc(tamanho + 1);
+        fread(arquivo_solicitado,tamanho, 1,arq);
+        //printf("AAAA: %s\n",arquivo_solicitado);
+        
+
+        printf("ARQ: %s\n",arquivo_solicitado);
+        // Resposta ao cliente caso a conexao tenha sucesso
+        situacao = write(cliente_conect,arquivo_solicitado,sizeof(arquivo_solicitado)); 
     }
-    
-    printf("AAAAAB : %s\n\n",resp_parte2);
-    write(cliente_conect,resp_parte2,sizeof(resp_parte2));
-
-    char *arquivo_solicitado = malloc(tamanho + 1);
-    fread(arquivo_solicitado,tamanho, 1,arq);
-    //printf("AAAA: %s\n",arquivo_solicitado);
-    
-
-    printf("ARQ: %s\n",arquivo_solicitado);
-    // Resposta ao cliente caso a conexao tenha sucesso
-    situacao = write(cliente_conect,arquivo_solicitado,sizeof(arquivo_solicitado)); 
-   	
         
     //Erro em enviar a resposta 
 	if(situacao == -1){

@@ -17,10 +17,10 @@ socklen_t tamanho_cliente;
 struct dirent *dir;
 
 
-int cliente_socket = 0,aux = 0 ,cliente_thread = 0,id_thread = 0,cliente_conect = 0;
-char mensagem[2048], *arquivo,*split;
+int cliente_socket = 0,cliente_thread = 0,id_thread = 0,cliente_conect = 0;
 
-void resposta_servidor(int cliente);
+
+void resposta_servidor(int cliente, char *arquivo);
 void *cria_thread(void *cliente_thread);
 
 
@@ -62,42 +62,13 @@ void servidor_FilaTarefas (int porta){
     while(1){
         //Realiza a conexao do servidor com cliente
         cliente_conect = accept(new_socket,(struct sockaddr *) &cliente, &tamanho_cliente);
-
-        if(cliente_conect >= 0){
-            printf("Conecatdo com sucesso !\n");
-        }
-        else{
-            perror("Erro ao se conectar !");
-        }
-              
-
-        aux = read (cliente_conect, mensagem, 2048);
-        char resp [strlen(mensagem)];        
-        strcpy(resp,mensagem);        
-        split = strtok(resp, "/");
-        split = strtok(NULL, " ");
-        arquivo = split;
-        printf("ARQUIVO : %s\n",arquivo);
-
-        
-
-        if(aux >= 0){            
-            printf("Requisicao do cliente:\n------------------------------------------------------\n%s\n",mensagem);
-            
-        }        
-        else{
-            perror("Erro ao ler a mensagem do cliente!");
-        }
-        
-        
-        
-        // Atribui a requisicao do cliente a uma thread
-        cliente_thread = pthread_create(&nova_thread[id_thread], NULL, cria_thread, &cliente_conect);
+    // Atribui a requisicao do cliente a uma thread
+        cliente_thread = pthread_create(&nova_thread[id_thread], NULL, cria_thread, cliente_conect);
 
         if(cliente_thread != 0) 
             perror("ERRO na criação de uma nova thread.");
-
-        pthread_join(nova_thread[id_thread], NULL);
+        
+         //   pthread_join(nova_thread[id_thread], NULL);
         id_thread++;  
         printf("ID : %d\n",id_thread);     
 
@@ -109,18 +80,37 @@ void servidor_FilaTarefas (int porta){
 
 // Funcao ponteiro void responsavel pela thread
 void *cria_thread(void *cliente_conect){
-    
-    int *cliente_porta = (void *) cliente_conect;
-   
-    resposta_servidor(*cliente_porta);
-    close(*cliente_porta);
+    int aux = 0;
+    char mensagem[2048], *arquivo,*split;
+    uint64_t cliente_porta = (uint64_t) cliente_conect;
+
+    aux = read (cliente_porta, mensagem, 2048);
+    char resp [strlen(mensagem)];        
+    strcpy(resp,mensagem);        
+    split = strtok(resp, "/");
+    split = strtok(NULL, " ");
+    arquivo = split;
+    printf("ARQUIVO : %s\n",arquivo);
+
+
+    if(aux >= 0){            
+        printf("Requisicao do cliente:\n------------------------------------------------------\n%s\n",mensagem);
+        
+    }        
+    else{
+        perror("Erro ao ler a mensagem do cliente!");
+    }
+
+
+    resposta_servidor(cliente_porta,arquivo);
+    close(cliente_porta);
     pthread_exit(NULL);
 }
 
 
 
 // Responsavel por responder a requisicao do cliente
-void resposta_servidor(int cliente_conect){	   
+void resposta_servidor(int cliente_conect,char *arquivo){	   
     int situacao;
     char *aux;
     char resp [255]= "HTTP/1.1 200 OK\r\n\
@@ -143,29 +133,36 @@ void resposta_servidor(int cliente_conect){
             strcat(resp,tam_diretorio);
             strcat(resp,"\r\n\r\n");
             printf("RESP : %s\n",resp);
-            write(cliente_conect,resp,sizeof(resp));
+            write(cliente_conect,resp,strlen(resp));
             printf("DIRE : %s\n",diretorio);
-            write(cliente_conect,diretorio,sizeof(diretorio));
+            write(cliente_conect,diretorio,strlen(diretorio));
             closedir(d);
         }
     }   
     else {
         char tamanho2[50];
         FILE *arq = fopen(arquivo, "rb");   
-        fseek(arq,0, SEEK_END);
+        fseek(arq,0L, SEEK_END);
         long tamanho = ftell(arq);    
+        printf("EEEEEEE: %s, %ld\n", arquivo, tamanho);
         sprintf(tamanho2,"%ld",tamanho);    
         fseek(arq, 0, SEEK_SET);        
-        char resp_parte1[255] = "HTTP/1.1 200 OK\r\n";
-        write(cliente_conect,resp_parte1,sizeof(resp_parte1));
-        strcpy (resp_parte1,"Content-Length: ");
+        char resp_parte1[1024] = "HTTP/1.1 200 OK\r\naccept-ranges: bytes\r\n";
+        
+        char fname[250];
+        sprintf(fname, "teste%d.txt", cliente_conect);
+        FILE *teste = fopen(fname, "w");
+        
+        write(cliente_conect,resp_parte1,strlen(resp_parte1));
+        
+        strcpy (resp_parte1,"content-length: ");
         //resp_parte1 = "Content-Length: ";           
         strcat(resp_parte1, tamanho2);
         strcat(resp_parte1, "\r\n");      
         printf("PART1: %s\n",resp_parte1);
-        write(cliente_conect,resp_parte1,sizeof(resp_parte1));   
-        char resp_parte2[255] = "Connection: close\r\n";
-        strcpy (resp_parte2,"Content-Type: ");
+        write(cliente_conect,resp_parte1,strlen(resp_parte1));   
+        char resp_parte2[255] = "connection: close\r\n";
+        strcpy (resp_parte2,"content-type: ");
         //resp_parte2 = "Content-Type: ";
         aux = strtok (arquivo, ".");    
         aux = strtok (NULL, "\0");
@@ -198,16 +195,21 @@ void resposta_servidor(int cliente_conect){
         }
         
         printf("AAAAAB : %s\n\n",resp_parte2);
-        write(cliente_conect,resp_parte2,sizeof(resp_parte2));
+        write(cliente_conect,resp_parte2,strlen(resp_parte2));
 
-        char *arquivo_solicitado = malloc(tamanho + 1);
+        printf("TAMANHOOO : %ld\n",tamanho);
+        char *arquivo_solicitado = malloc(tamanho);
+
         fread(arquivo_solicitado,tamanho, 1,arq);
+        
+        
         //printf("AAAA: %s\n",arquivo_solicitado);
         
 
-        printf("ARQ: %s\n",arquivo_solicitado);
+        printf("ARQQQQ: %s\n",arquivo_solicitado);
         // Resposta ao cliente caso a conexao tenha sucesso
-        situacao = write(cliente_conect,arquivo_solicitado,sizeof(arquivo_solicitado)); 
+        situacao = write(cliente_conect,arquivo_solicitado,tamanho); 
+        printf("AAAAAAAAAAAAAAAAAAAAAA: situacao %d\n", situacao);
     }
         
     //Erro em enviar a resposta 

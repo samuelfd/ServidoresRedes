@@ -56,7 +56,7 @@ void servidor_FilaTarefas (int porta){
 
 
     //Dtermina o tamanho da fila de requisicoes que o servidor pode receber sem perdas de requisicoes.
-    listen(new_socket,50);
+    listen(new_socket,200);
     tamanho_cliente = sizeof(cliente);
 
     while(1){
